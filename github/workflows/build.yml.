@@ -1,0 +1,2264 @@
+Name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - name: Create project files
+        run: |
+          mkdir -p app/src/main/java/com/mylauncher app/src/main/res/drawable app/src/main/res/mipmap-anydpi-v26
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "VadLan"
+          include ':app'
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins { id 'com.android.application' version '8.5.2' apply false }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.mylauncher'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.vadlan"
+                  minSdk 26
+                  targetSdk 34
+                  versionCode 5
+                  versionName "5.0"
+              }
+          }
+          tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <queries>
+                  <intent>
+                      <action android:name="android.intent.action.MAIN" />
+                      <category android:name="android.intent.category.LAUNCHER" />
+                  </intent>
+              </queries>
+              <application
+                  android:label="VadLan"
+                  android:icon="@mipmap/ic_launcher"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:windowSoftInputMode="adjustResize"
+                      android:launchMode="singleTask">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <service
+                      android:name=".VadTile"
+                      android:enabled="false"
+                      android:exported="true"
+                      android:label="Vad"
+                      android:icon="@drawable/ic_tile"
+                      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+                      <intent-filter>
+                          <action android:name="android.service.quicksettings.action.QS_TILE" />
+                      </intent-filter>
+                  </service>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_bg"/>
+              <foreground android:drawable="@drawable/ic_fg"/>
+          </adaptive-icon>
+          EOF
+
+          cat > app/src/main/res/drawable/ic_bg.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:aapt="http://schemas.android.com/aapt"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:pathData="M0,0h108v108h-108z">
+                  <aapt:attr name="android:fillColor">
+                      <gradient android:startX="0" android:startY="0"
+                          android:endX="108" android:endY="108" android:type="linear">
+                          <item android:offset="0" android:color="#FF1A1A1E"/>
+                          <item android:offset="0.55" android:color="#FF222228"/>
+                          <item android:offset="1" android:color="#FF121215"/>
+                      </gradient>
+                  </aapt:attr>
+              </path>
+          </vector>
+          EOF
+
+          cat > app/src/main/res/drawable/ic_fg.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#FFFFFF" android:pathData="M42,21h24a6,6 0 0 1 6,6v54a6,6 0 0 1 -6,6h-24a6,6 0 0 1 -6,-6v-54a6,6 0 0 1 6,-6z"/>
+              <path android:fillColor="#1E2350" android:pathData="M41,26h26a3,3 0 0 1 3,3v50a3,3 0 0 1 -3,3h-26a3,3 0 0 1 -3,-3v-50a3,3 0 0 1 3,-3z"/>
+              <path android:fillColor="#FF9F43" android:pathData="M41,31h5v5h-5z"/>
+              <path android:fillColor="#2ED573" android:pathData="M51.5,31h5v5h-5z"/>
+              <path android:fillColor="#FF6B9D" android:pathData="M62,31h5v5h-5z"/>
+              <path android:fillColor="#4FC3F7" android:pathData="M41,41.5h5v5h-5z"/>
+              <path android:fillColor="#FFD93D" android:pathData="M51.5,41.5h5v5h-5z"/>
+              <path android:fillColor="#A78BFA" android:pathData="M62,41.5h5v5h-5z"/>
+          </vector>
+          EOF
+
+          cat > app/src/main/res/drawable/ic_tile.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp"
+              android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M20,18c1.1,0 1.99,-0.9 1.99,-2L22,6c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2H0v2h24v-2h-4zM4,6h16v10H4V6z"/>
+          </vector>
+          EOF
+
+          cat > app/src/main/res/drawable/ic_gear.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp"
+              android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94zM12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z"/>
+          </vector>
+          EOF
+
+          cat > app/src/main/res/drawable/ic_plus.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp"
+              android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </vector>
+          EOF
+
+          cat > app/src/main/res/drawable/ic_back.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp"
+              android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z"/>
+          </vector>
+          EOF
+
+          cat > app/src/main/java/com/mylauncher/VadTile.java <<'EOF'
+          package com.mylauncher;
+
+          import android.app.PendingIntent;
+          import android.content.Intent;
+          import android.os.Build;
+          import android.service.quicksettings.Tile;
+          import android.service.quicksettings.TileService;
+
+          public class VadTile extends TileService {
+              void upd() {
+                  Tile t = getQsTile();
+                  if (t == null) return;
+                  boolean open = getSharedPreferences("l", 0).getBoolean("open", false);
+                  t.setState(open ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+                  t.setLabel("Vad");
+                  t.updateTile();
+              }
+
+              @Override
+              public void onStartListening() { upd(); }
+
+              @Override
+              public void onClick() {
+                  Tile t = getQsTile();
+                  if (t != null) { t.setState(Tile.STATE_ACTIVE); t.updateTile(); }
+                  Intent i = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                  if (Build.VERSION.SDK_INT >= 34) {
+                      startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE));
+                  } else {
+                      startActivityAndCollapse(i);
+                  }
+              }
+          }
+          EOF
+
+          cat > app/src/main/java/com/mylauncher/ColorPicker.java <<'EOF'
+          package com.mylauncher;
+
+          import android.content.Context;
+          import android.graphics.Canvas;
+          import android.graphics.Color;
+          import android.graphics.LinearGradient;
+          import android.graphics.Paint;
+          import android.graphics.Shader;
+          import android.view.MotionEvent;
+          import android.view.View;
+
+          public class ColorPicker extends View {
+              public interface Listener { void onColor(int c); }
+
+              float h = 0, s = 1, v = 1, side = 100;
+              int a = 255, mode = 0;
+              Listener l;
+              Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+              public ColorPicker(Context c) { super(c); }
+
+              public void setListener(Listener x) { l = x; }
+
+              public void setColor(int c) {
+                  float[] hsv = new float[3];
+                  Color.colorToHSV(c, hsv);
+                  h = hsv[0];
+                  s = hsv[1];
+                  v = hsv[2];
+                  a = Color.alpha(c);
+                  invalidate();
+              }
+
+              public int getColor() { return Color.HSVToColor(a, new float[]{h, s, v}); }
+
+              float dp(float x) { return x * getResources().getDisplayMetrics().density; }
+
+              float clamp(float f) { return Math.max(0f, Math.min(1f, f)); }
+
+              @Override
+              protected void onMeasure(int ws, int hs) {
+                  int w = MeasureSpec.getSize(ws);
+                  float sd = w - dp(46);
+                  setMeasuredDimension(w, (int) (sd + dp(18) + dp(28) + dp(4)));
+              }
+
+              @Override
+              protected void onDraw(Canvas c) {
+                  float w = getWidth();
+                  side = w - dp(46);
+                  float hx = side + dp(14);
+                  float ay = side + dp(18);
+                  int hueCol = Color.HSVToColor(new float[]{h, 1f, 1f});
+
+                  p.setStyle(Paint.Style.FILL);
+                  p.setShader(new LinearGradient(0, 0, side, 0, Color.WHITE, hueCol, Shader.TileMode.CLAMP));
+                  c.drawRoundRect(0, 0, side, side, dp(8), dp(8), p);
+                  p.setShader(new LinearGradient(0, 0, 0, side, 0x00000000, 0xFF000000, Shader.TileMode.CLAMP));
+                  c.drawRoundRect(0, 0, side, side, dp(8), dp(8), p);
+
+                  int[] cols = new int[7];
+                  for (int i = 0; i < 7; i++) cols[i] = Color.HSVToColor(new float[]{i * 60f, 1f, 1f});
+                  p.setShader(new LinearGradient(0, 0, 0, side, cols, null, Shader.TileMode.CLAMP));
+                  c.drawRoundRect(hx, 0, w, side, dp(8), dp(8), p);
+
+                  p.setShader(null);
+                  float cell = dp(7);
+                  c.save();
+                  c.clipRect(0, ay, w, ay + dp(28));
+                  for (int i = 0; i * cell < w; i++) {
+                      for (int j = 0; j < 4; j++) {
+                          p.setColor(((i + j) % 2 == 0) ? 0xFFFFFFFF : 0xFFBBBBBB);
+                          c.drawRect(i * cell, ay + j * cell, (i + 1) * cell, ay + (j + 1) * cell, p);
+                      }
+                  }
+                  int solid = Color.HSVToColor(255, new float[]{h, s, v});
+                  p.setShader(new LinearGradient(0, 0, w, 0, solid & 0x00FFFFFF, solid, Shader.TileMode.CLAMP));
+                  c.drawRect(0, ay, w, ay + dp(28), p);
+                  c.restore();
+                  p.setShader(null);
+
+                  p.setStyle(Paint.Style.STROKE);
+                  float cx = s * side, cy = (1 - v) * side;
+                  p.setStrokeWidth(dp(3));
+                  p.setColor(0xFFFFFFFF);
+                  c.drawCircle(cx, cy, dp(9), p);
+                  p.setStrokeWidth(dp(1));
+                  p.setColor(0xFF000000);
+                  c.drawCircle(cx, cy, dp(10.5f), p);
+
+                  float hy = h / 360f * side;
+                  p.setStrokeWidth(dp(4));
+                  p.setColor(0xFFFFFFFF);
+                  c.drawLine(hx, hy, w, hy, p);
+                  p.setStrokeWidth(dp(1));
+                  p.setColor(0xFF000000);
+                  c.drawLine(hx, hy - dp(2.5f), w, hy - dp(2.5f), p);
+                  c.drawLine(hx, hy + dp(2.5f), w, hy + dp(2.5f), p);
+
+                  float ax = a / 255f * w;
+                  p.setStrokeWidth(dp(4));
+                  p.setColor(0xFFFFFFFF);
+                  c.drawLine(ax, ay, ax, ay + dp(28), p);
+                  p.setStrokeWidth(dp(1));
+                  p.setColor(0xFF000000);
+                  c.drawLine(ax - dp(2.5f), ay, ax - dp(2.5f), ay + dp(28), p);
+                  c.drawLine(ax + dp(2.5f), ay, ax + dp(2.5f), ay + dp(28), p);
+                  p.setStyle(Paint.Style.FILL);
+              }
+
+              @Override
+              public boolean onTouchEvent(MotionEvent e) {
+                  float w = getWidth();
+                  float x = e.getX(), y = e.getY();
+                  if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                      if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                      if (y > side + dp(8)) mode = 2;
+                      else if (x > side + dp(6)) mode = 1;
+                      else mode = 0;
+                  }
+                  if (mode == 0) {
+                      s = clamp(x / side);
+                      v = 1 - clamp(y / side);
+                  } else if (mode == 1) {
+                      h = clamp(y / side) * 359.99f;
+                  } else {
+                      a = (int) (clamp(x / w) * 255);
+                  }
+                  invalidate();
+                  if (l != null) l.onColor(getColor());
+                  return true;
+              }
+          }
+          EOF
+
+          cat > app/src/main/java/com/mylauncher/MainActivity.java <<'EOF'
+          package com.mylauncher;
+
+          import android.app.*;
+          import android.content.*;
+          import android.content.pm.*;
+          import android.graphics.*;
+          import android.graphics.drawable.*;
+          import android.os.*;
+          import android.service.quicksettings.TileService;
+          import android.text.*;
+          import android.util.DisplayMetrics;
+          import android.view.*;
+          import android.view.animation.*;
+          import android.widget.*;
+          import java.util.*;
+          import java.util.function.IntConsumer;
+          import org.json.*;
+
+          public class MainActivity extends Activity {
+              static final int HOME = 0, SETTINGS = 1, BG = 2, BEHAVIOR = 3, LANG = 4, PICKER = 5,
+                      DOCK = 6, ICON = 8;
+              static final int DLG = 0xFFEEEEEE;
+
+              static class AppItem { String label, pkg; Drawable icon; }
+
+              static class Item {
+                  boolean folder;
+                  String pkg, id, name = "";
+                  int color = 0x3A28282C;
+                  List<String> apps = new ArrayList<>();
+              }
+
+              SharedPreferences sp;
+              int bg, fgc, page = HOME, dockPage1 = 0, dockPage2 = 0, shownPage = -1, openCx, openCy;
+              boolean fa, plusOpen = false, editName = false, folderSettings = false,
+                      animFolder = false, animSettings = false, compact = false;
+              View trashBtn;
+              final int[] colors = {0xFF19191C, 0xFF222226, 0xFF121214, 0xFF000000,
+                      0xFF1B2A3A, 0xFF1E3326, 0xFF3B1F24, 0xFF2E2140};
+              final int[] fcolors = {0x3A28282C, 0x66000000, 0x66E53935, 0x66FB8C00, 0x66FDD835, 0x6643A047,
+                      0x6600ACC1, 0x661E88E5, 0x665E35B1, 0x66D81B60, 0x668D6E63, 0x6690A4AE};
+
+              FrameLayout container;
+              View curPanel, normalBar, selBar;
+              TextView selCount;
+              FrameLayout dockHolder1, dockHolder2;
+
+              List<Item> home = new ArrayList<>();
+              List<List<String>> dock1 = new ArrayList<>();
+              List<List<String>> dock2 = new ArrayList<>();
+              Set<String> sel = new LinkedHashSet<>();
+              Map<String, View> cells = new HashMap<>();
+              String openFolder = null, pickTarget = null;
+
+              List<AppItem> allApps = new ArrayList<>();
+              List<String> added = new ArrayList<>();
+              Set<String> selected = new LinkedHashSet<>();
+              String query = "";
+              LinearLayout listBox;
+              TextView allText;
+              View allDot;
+              Button addBtn;
+
+              String t(String f, String e) { return fa ? f : e; }
+
+              // ================= lifecycle =================
+              @Override
+              protected void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  sp = getSharedPreferences("l", 0);
+                  fa = sp.getString("lang", "fa").equals("fa");
+                  bg = sp.getInt("bg", colors[0]);
+                  getWindow().setBackgroundDrawable(new ColorDrawable(bg));
+                  container = new FrameLayout(this);
+                  setContentView(container);
+                  if (Build.VERSION.SDK_INT >= 33 &&
+                          checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                                  != PackageManager.PERMISSION_GRANTED) {
+                      requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
+                  }
+                  loadHome();
+                  loadDock(1);
+                  loadDock(2);
+                  notifyBar();
+                  show();
+              }
+
+              @Override
+              protected void onNewIntent(Intent in) {
+                  super.onNewIntent(in);
+                  setIntent(in);
+                  page = HOME;
+                  openFolder = null;
+                  plusOpen = false;
+                  folderSettings = false;
+                  sel.clear();
+                  show();
+              }
+
+              @Override
+              public void onRequestPermissionsResult(int c, String[] p, int[] r) { notifyBar(); }
+
+              @Override
+              protected void onStart() {
+                  super.onStart();
+                  sp.edit().putBoolean("open", true).apply();
+                  requestTile();
+              }
+
+              @Override
+              protected void onStop() {
+                  super.onStop();
+                  sp.edit().putBoolean("open", false).apply();
+                  requestTile();
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (page == HOME) {
+                      if (!sel.isEmpty()) { sel.clear(); refreshCells(); updateSel(); }
+                      else if (plusOpen) { plusOpen = false; show(); }
+                      else if (openFolder != null) closeFolder();
+                      else super.onBackPressed();
+                  } else if (page == SETTINGS) {
+                      page = HOME;
+                      show();
+                  } else if (page == PICKER) {
+                      pickTarget = null;
+                      page = HOME;
+                      show();
+                  } else {
+                      page = SETTINGS;
+                      show();
+                  }
+              }
+
+              void requestTile() {
+                  try {
+                      TileService.requestListeningState(this, new ComponentName(this, VadTile.class));
+                  } catch (Exception e) { }
+              }
+
+              void notifyBar() {
+                  NotificationManager nm = getSystemService(NotificationManager.class);
+                  nm.createNotificationChannel(new NotificationChannel("l", "VadLan",
+                          NotificationManager.IMPORTANCE_LOW));
+                  Intent i = new Intent(this, MainActivity.class)
+                          .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                  PendingIntent pi = PendingIntent.getActivity(this, 0, i,
+                          PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                  Notification n = new Notification.Builder(this, "l")
+                          .setSmallIcon(R.drawable.ic_tile)
+                          .setContentTitle("VadLan")
+                          .setContentText(t("برای باز کردن لمس کنید", "Tap to open"))
+                          .setContentIntent(pi)
+                          .setOngoing(true)
+                          .build();
+                  nm.notify(1, n);
+              }
+
+              // ================= data =================
+              void loadHome() {
+                  home.clear();
+                  String s = sp.getString("home", null);
+                  try {
+                      if (s != null) {
+                          JSONArray a = new JSONArray(s);
+                          for (int i = 0; i < a.length(); i++) {
+                              JSONObject o = a.getJSONObject(i);
+                              Item it = new Item();
+                              if (o.has("id")) {
+                                  it.folder = true;
+                                  it.id = o.getString("id");
+                                  it.name = o.optString("n", "");
+                                  it.color = o.optInt("c", 0x3A28282C);
+                                  JSONArray ar = o.getJSONArray("a");
+                                  for (int j = 0; j < ar.length(); j++) it.apps.add(ar.getString(j));
+                              } else {
+                                  it.pkg = o.getString("p");
+                              }
+                              home.add(it);
+                          }
+                      } else {
+                          for (String x : sp.getString("apps", "").split(",")) {
+                              if (x.isEmpty()) continue;
+                              Item it = new Item();
+                              it.pkg = x;
+                              home.add(it);
+                          }
+                      }
+                  } catch (Exception e) { }
+              }
+
+              void saveHome() {
+                  try {
+                      JSONArray a = new JSONArray();
+                      for (Item it : home) {
+                          JSONObject o = new JSONObject();
+                          if (it.folder) {
+                              o.put("id", it.id);
+                              o.put("n", it.name);
+                              o.put("c", it.color);
+                              JSONArray ar = new JSONArray();
+                              for (String p : it.apps) ar.put(p);
+                              o.put("a", ar);
+                          } else {
+                              o.put("p", it.pkg);
+                          }
+                          a.put(o);
+                      }
+                      sp.edit().putString("home", a.toString()).apply();
+                  } catch (Exception e) { }
+              }
+
+              void loadDock(int num) {
+                  List<List<String>> d = (num == 1) ? dock1 : dock2;
+                  d.clear();
+                  String s = sp.getString("dock" + num, "");
+                  for (String pg : s.split(";", -1)) {
+                      List<String> l = new ArrayList<>();
+                      for (String x : pg.split(",")) if (!x.isEmpty()) l.add(x);
+                      d.add(l);
+                  }
+              }
+
+              void saveDock(int num) {
+                  List<List<String>> d = (num == 1) ? dock1 : dock2;
+                  StringBuilder b = new StringBuilder();
+                  for (int i = 0; i < d.size(); i++) {
+                      if (i > 0) b.append(';');
+                      b.append(String.join(",", d.get(i)));
+                  }
+                  sp.edit().putString("dock" + num, b.toString()).apply();
+              }
+
+              List<String> dockPageList(int num, int i) {
+                  List<List<String>> d = (num == 1) ? dock1 : dock2;
+                  while (d.size() <= i) d.add(new ArrayList<String>());
+                  return d.get(i);
+              }
+
+              Item findFolder(String id) {
+                  for (Item it : home) if (it.folder && it.id.equals(id)) return it;
+                  for (List<String> pg : dock1) {
+                      for (String e : pg) {
+                          if (e.startsWith("folder:") && e.substring(7).equals(id)) return new Item();
+                      }
+                  }
+                  for (List<String> pg : dock2) {
+                      for (String e : pg) {
+                          if (e.startsWith("folder:") && e.substring(7).equals(id)) return new Item();
+                      }
+                  }
+                  return null;
+              }
+
+              String folderTitle(Item f) {
+                  if (f == null) return "?";
+                  return f.name.isEmpty() ? t("پوشه", "Folder") : f.name;
+              }
+
+              boolean installed(String p) {
+                  try { getPackageManager().getApplicationInfo(p, 0); return true; }
+                  catch (Exception e) { return false; }
+              }
+
+              Drawable icon(String p) {
+                  try { return getPackageManager().getApplicationIcon(p); }
+                  catch (Exception e) { return null; }
+              }
+
+              String label(String p) {
+                  try {
+                      PackageManager pm = getPackageManager();
+                      return pm.getApplicationLabel(pm.getApplicationInfo(p, 0)).toString();
+                  } catch (Exception e) { return p; }
+              }
+
+              // ================= helpers =================
+              int dp(int v) { return (int) (v * getResources().getDisplayMetrics().density); }
+
+              boolean isLight(int c) {
+                  return (0.299 * Color.red(c) + 0.587 * Color.green(c) + 0.114 * Color.blue(c)) > 150;
+              }
+
+              int solid(int c) {
+                  int a = Color.alpha(c);
+                  return Color.rgb(Color.red(c) * a / 255, Color.green(c) * a / 255, Color.blue(c) * a / 255);
+              }
+
+              boolean light() { return isLight(solid(bg)); }
+
+              String hex(int c) { return String.format("#%08X", c); }
+
+              GradientDrawable oval(int color) {
+                  GradientDrawable g = new GradientDrawable();
+                  g.setShape(GradientDrawable.OVAL);
+                  g.setColor(color);
+                  return g;
+              }
+
+              LinearLayout vbox() {
+                  LinearLayout l = new LinearLayout(this);
+                  l.setOrientation(LinearLayout.VERTICAL);
+                  l.setBackgroundColor(bg);
+                  l.setPadding(dp(16), dp(16), dp(16), dp(16));
+                  return l;
+              }
+
+              void postShow() { container.post(() -> show()); }
+
+              Button btn(String text, int fg, View.OnClickListener c) {
+                  Button x = new Button(this);
+                  x.setText(text);
+                  x.setTextColor(fg);
+                  x.setAllCaps(false);
+                  GradientDrawable g = new GradientDrawable();
+                  g.setCornerRadius(dp(16));
+                  g.setColor(light() ? 0x22000000 : 0x33FFFFFF);
+                  x.setBackground(g);
+                  x.setOnClickListener(c);
+                  LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(48), 1);
+                  p.setMargins(dp(4), dp(4), dp(4), dp(4));
+                  x.setLayoutParams(p);
+                  return x;
+              }
+
+              ImageView iconBtn(int res, int fg, View.OnClickListener c) {
+                  ImageView v = new ImageView(this);
+                  v.setImageResource(res);
+                  v.setColorFilter(fg);
+                  v.setPadding(dp(9), dp(9), dp(9), dp(9));
+                  v.setBackground(oval(light() ? 0x22000000 : 0x33FFFFFF));
+                  v.setOnClickListener(c);
+                  return v;
+              }
+
+              FrameLayout.LayoutParams abs(int g) {
+                  return new FrameLayout.LayoutParams(dp(40), dp(40), g | Gravity.CENTER_VERTICAL);
+              }
+
+              FrameLayout topBar(String title, int fg) {
+                  FrameLayout h = new FrameLayout(this);
+                  TextView tv = new TextView(this);
+                  tv.setText(title);
+                  tv.setTextSize(20);
+                  tv.setTextColor(fg);
+                  tv.setTypeface(null, Typeface.BOLD);
+                  h.addView(tv, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+                  h.addView(iconBtn(R.drawable.ic_back, fg, v -> onBackPressed()), abs(Gravity.LEFT));
+                  return h;
+              }
+
+              View row(int dot, String sym, String title, String sub, int ind, int fg, View.OnClickListener c) {
+                  int ds = compact ? 22 : 30;
+                  int pad = compact ? 8 : 14;
+                  LinearLayout r = new LinearLayout(this);
+                  r.setGravity(Gravity.CENTER_VERTICAL);
+                  r.setPadding(dp(pad), dp(pad), dp(pad), dp(pad));
+                  GradientDrawable g = new GradientDrawable();
+                  g.setCornerRadius(dp(18));
+                  g.setColor(light() ? 0x14000000 : 0x1AFFFFFF);
+                  r.setBackground(g);
+                  TextView d = new TextView(this);
+                  d.setText(sym);
+                  d.setGravity(Gravity.CENTER);
+                  d.setTextSize(compact ? 11 : 15);
+                  d.setTextColor(0xFFFFFFFF);
+                  d.setBackground(oval(dot));
+                  LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(dp(ds), dp(ds));
+                  dl.setMarginEnd(dp(compact ? 8 : 14));
+                  r.addView(d, dl);
+                  LinearLayout col = new LinearLayout(this);
+                  col.setOrientation(LinearLayout.VERTICAL);
+                  TextView a = new TextView(this);
+                  a.setText(title);
+                  a.setTextSize(compact ? 13 : 16);
+                  a.setTextColor(fg);
+                  col.addView(a);
+                  if (sub != null) {
+                      TextView s = new TextView(this);
+                      s.setText(sub);
+                      s.setTextSize(12);
+                      s.setTextColor(fg);
+                      s.setAlpha(0.65f);
+                      col.addView(s);
+                  }
+                  r.addView(col, new LinearLayout.LayoutParams(0, -2, 1));
+                  if (ind == 1) {
+                      TextView ck = new TextView(this);
+                      ck.setText("✓");
+                      ck.setTextSize(20);
+                      ck.setTextColor(0xFF34C759);
+                      r.addView(ck);
+                  } else if (ind >= 2) {
+                      TextView ck = new TextView(this);
+                      ck.setText("✓");
+                      ck.setTextSize(13);
+                      ck.setGravity(Gravity.CENTER);
+                      GradientDrawable g2 = oval(ind == 3 ? 0xFF34C759 : 0);
+                      if (ind == 3) {
+                          ck.setTextColor(0xFFFFFFFF);
+                      } else {
+                          ck.setTextColor(0);
+                          g2.setStroke(dp(2), 0x88888888);
+                      }
+                      ck.setBackground(g2);
+                      r.addView(ck, new LinearLayout.LayoutParams(dp(24), dp(24)));
+                  }
+                  r.setOnClickListener(c);
+                  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+                  lp.setMargins(0, dp(compact ? 6 : 10), 0, 0);
+                  r.setLayoutParams(lp);
+                  return r;
+              }
+
+              View slider(final String label, final String key, final int min, int max, int def,
+                          final String unit, int fg, final Runnable onStop) {
+                  LinearLayout c = new LinearLayout(this);
+                  c.setOrientation(LinearLayout.VERTICAL);
+                  c.setPadding(dp(4), dp(compact ? 8 : 14), dp(4), 0);
+                  final TextView tv = new TextView(this);
+                  tv.setTextColor(fg);
+                  tv.setTextSize(compact ? 12 : 14);
+                  int cur = sp.getInt(key, def);
+                  tv.setText(label + ": " + cur + unit);
+                  SeekBar sb = new SeekBar(this);
+                  sb.setMax(max - min);
+                  sb.setProgress(cur - min);
+                  sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                      public void onProgressChanged(SeekBar s, int p, boolean u) {
+                          tv.setText(label + ": " + (p + min) + unit);
+                          sp.edit().putInt(key, p + min).apply();
+                      }
+                      public void onStartTrackingTouch(SeekBar s) { }
+                      public void onStopTrackingTouch(SeekBar s) { if (onStop != null) onStop.run(); }
+                  });
+                  c.addView(tv);
+                  c.addView(sb);
+                  return c;
+              }
+
+              void colorDialog(String title, int cur, final IntConsumer cb) {
+                  ScrollView sv = new ScrollView(this);
+                  LinearLayout box = new LinearLayout(this);
+                  box.setOrientation(LinearLayout.VERTICAL);
+                  box.setPadding(dp(16), dp(8), dp(16), dp(8));
+                  final ColorPicker cp = new ColorPicker(this);
+                  cp.setColor(cur);
+                  final TextView hx = new TextView(this);
+                  hx.setText(hex(cur));
+                  hx.setTextColor(DLG);
+                  hx.setPadding(0, dp(8), 0, 0);
+                  cp.setListener(c -> hx.setText(hex(c)));
+                  for (int r = 0; r < 2; r++) {
+                      LinearLayout rowL = new LinearLayout(this);
+                      for (int k = 0; k < 6; k++) {
+                          final int c = fcolors[r * 6 + k];
+                          View sw = new View(this);
+                          GradientDrawable g = oval(c | 0xFF000000);
+                          g.setStroke(dp(2), 0x88888888);
+                          sw.setBackground(g);
+                          LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(36), dp(36));
+                          lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+                          sw.setOnClickListener(w -> { cp.setColor(c); hx.setText(hex(c)); });
+                          rowL.addView(sw, lp);
+                      }
+                      box.addView(rowL);
+                  }
+                  box.addView(cp, new LinearLayout.LayoutParams(-1, -2));
+                  box.addView(hx);
+                  sv.addView(box);
+                  new AlertDialog.Builder(this).setTitle(title).setView(sv)
+                          .setPositiveButton(t("تأیید", "OK"), (d, w) -> cb.accept(cp.getColor()))
+                          .setNegativeButton(t("لغو", "Cancel"), null).show();
+              }
+
+              void prefColorDialog(final String key, int def, String title) {
+                  colorDialog(title, sp.getInt(key, def), c -> {
+                      sp.edit().putInt(key, c).apply();
+                      show();
+                  });
+              }
+
+              // ================= page switching + animation =================
+              int rank(int p) { return (p == HOME || p == PICKER) ? 0 : (p == SETTINGS ? 1 : 2); }
+
+              int transDir(int from, int to) {
+                  if (from < 0 || from == to) return 0;
+                  int rf = rank(from), rt = rank(to);
+                  if (rf == 0 && rt == 1) return 1;
+                  if (rf == 1 && rt == 0) return -1;
+                  if (rf == 1 && rt == 2) return 2;
+                  if (rf == 2 && rt == 1) return -2;
+                  return 0;
+              }
+
+              void swap(View nv, int dir) {
+                  while (container.getChildCount() > 1) container.removeViewAt(0);
+                  final View old = container.getChildCount() > 0 ? container.getChildAt(0) : null;
+                  int W = container.getWidth() > 0 ? container.getWidth()
+                          : getResources().getDisplayMetrics().widthPixels;
+                  if (old == null || dir == 0) {
+                      container.removeAllViews();
+                      container.addView(nv, new FrameLayout.LayoutParams(-1, -1));
+                      return;
+                  }
+                  if (dir > 0) {
+                      container.addView(nv, new FrameLayout.LayoutParams(-1, -1));
+                      nv.setTranslationX(dir == 1 ? -W : W);
+                      nv.animate().translationX(0).setDuration(300)
+                              .setInterpolator(new DecelerateInterpolator())
+                              .withEndAction(() -> container.removeView(old)).start();
+                  } else {
+                      container.addView(nv, 0, new FrameLayout.LayoutParams(-1, -1));
+                      old.animate().translationX(dir == -1 ? -W : W).setDuration(260)
+                              .setInterpolator(new AccelerateInterpolator())
+                              .withEndAction(() -> container.removeView(old)).start();
+                  }
+              }
+
+              void show() {
+                  int fg = 0xFFFFFFFF;
+                  fgc = fg;
+                  getWindow().setStatusBarColor(solid(bg));
+                  getWindow().setNavigationBarColor(solid(bg));
+                  getWindow().getDecorView().setSystemUiVisibility(0);
+                  View v;
+                  if (page == SETTINGS) v = settingsPage(fg);
+                  else if (page == BG) v = bgPage(fg);
+                  else if (page == BEHAVIOR) v = behaviorPage(fg);
+                  else if (page == DOCK) v = dockPageView(fg);
+                  else if (page == ICON) v = iconPage(fg);
+                  else if (page == LANG) v = langPage(fg);
+                  else if (page == PICKER) v = pickerPage(fg);
+                  else v = homePage(fg);
+                  v.setLayoutDirection(fa ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+                  int from = shownPage;
+                  shownPage = page;
+                  swap(v, transDir(from, page));
+              }
+
+              // ================= home =================
+              View homePage(final int fg) {
+                  cells.clear();
+                  curPanel = null;
+                  LinearLayout root = new LinearLayout(this);
+                  root.setOrientation(LinearLayout.VERTICAL);
+                  root.setBackgroundColor(bg);
+                  root.setPadding(dp(12), dp(12), dp(12), dp(8));
+                  FrameLayout head = new FrameLayout(this);
+                  normalBar = homeBar(fg);
+                  selBar = selectionBar(fg);
+                  head.addView(normalBar, new FrameLayout.LayoutParams(-1, -2));
+                  head.addView(selBar, new FrameLayout.LayoutParams(-1, -2));
+                  root.addView(head);
+                  boolean dockTop = sp.getInt("dockPos1", 0) == 1;
+                  LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(-1, -2);
+                  dl.setMargins(0, dp(4), 0, dp(4));
+
+                  LinearLayout dockBox = new LinearLayout(this);
+                  dockBox.setOrientation(LinearLayout.VERTICAL);
+                  View dock2V = buildDock(2, fg);
+                  View dock1V = buildDock(1, fg);
+                  if (dock2V != null) dockBox.addView(dock2V, dl);
+                  if (dock1V != null) dockBox.addView(dock1V, dl);
+
+                  if (dockTop) root.addView(dockBox);
+                  FrameLayout mid = new FrameLayout(this);
+                  mid.addView(gridScroll(fg), new FrameLayout.LayoutParams(-1, -1));
+                  trashBtn = trashView();
+                  mid.addView(trashBtn, new FrameLayout.LayoutParams(dp(36), dp(36),
+                          (dockTop ? Gravity.TOP : Gravity.BOTTOM) | Gravity.CENTER_HORIZONTAL));
+                  if (plusOpen) mid.addView(plusMenu(fg), new FrameLayout.LayoutParams(-1, -1));
+                  if (openFolder != null) mid.addView(folderPopup(fg), new FrameLayout.LayoutParams(-1, -1));
+                  root.addView(mid, new LinearLayout.LayoutParams(-1, 0, 1));
+                  if (!dockTop) root.addView(dockBox);
+                  updateSel();
+                  return root;
+              }
+
+              FrameLayout homeBar(int fg) {
+                  FrameLayout h = new FrameLayout(this);
+                  h.addView(countBar(fg), new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+                  h.addView(iconBtn(R.drawable.ic_gear, fg, v -> { plusOpen = false; page = SETTINGS; show(); }), abs(Gravity.LEFT));
+                  h.addView(iconBtn(R.drawable.ic_plus, fg, v -> { plusOpen = !plusOpen; show(); }), abs(Gravity.RIGHT));
+                  return h;
+              }
+
+              View countBar(int fg) {
+                  LinearLayout c = new LinearLayout(this);
+                  c.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+                  c.setGravity(Gravity.CENTER);
+
+                  int appsHome = 0;
+                  for (Item it : home) {
+                      if (!it.folder) appsHome++;
+                  }
+
+                  int foldersTotal = 0;
+                  for (Item it : home) if (it.folder) foldersTotal++;
+                  for (List<String> pg : dock1) for (String e : pg) if (e.startsWith("folder:")) foldersTotal++;
+                  for (List<String> pg : dock2) for (String e : pg) if (e.startsWith("folder:")) foldersTotal++;
+
+                  int folderCount = foldersTotal;
+                  if (openFolder != null) {
+                      Item f = findFolder(openFolder);
+                      if (f != null) folderCount = f.apps.size();
+                  }
+
+                  c.addView(countBox("c2", folderCount, fg));
+                  c.addView(countBox("c1", appsHome, fg));
+                  return c;
+              }
+
+              Typeface weightFace(int i) {
+                  String[] n = {"sans-serif-thin", "sans-serif-light", "sans-serif", "sans-serif"};
+                  return Typeface.create(n[Math.max(0, Math.min(3, i))], i >= 3 ? Typeface.BOLD : Typeface.NORMAL);
+              }
+
+              View countBox(final String k, int n, int fg) {
+                  TextView tv = new TextView(this);
+                  tv.setText(String.valueOf(n));
+                  tv.setGravity(Gravity.CENTER);
+                  tv.setTextSize(sp.getInt("box_ts", 18));
+                  tv.setTextColor(sp.getInt("box_tc", fg));
+                  tv.setTypeface(weightFace(sp.getInt("box_tw", 3)));
+                  GradientDrawable g = new GradientDrawable();
+                  g.setCornerRadius(dp(16));
+                  g.setColor(sp.getInt("box_bg", 0x33FFFFFF));
+                  tv.setBackground(g);
+                  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                          dp(sp.getInt("box_w", 62)), dp(sp.getInt("box_h", 40)));
+                  lp.setMargins(dp(2), 0, dp(2), 0);
+                  tv.setLayoutParams(lp);
+                  longOne(tv, () -> boxMenu());
+                  return tv;
+              }
+
+              void longOne(View v, final Runnable r) {
+                  v.setOnTouchListener((w, ev) -> {
+                      int a = ev.getAction();
+                      if (a == MotionEvent.ACTION_DOWN) w.postDelayed(r, 1000);
+                      else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) w.removeCallbacks(r);
+                      return true;
+                  });
+              }
+
+              void boxMenu() {
+                  ScrollView sv = new ScrollView(this);
+                  LinearLayout box = new LinearLayout(this);
+                  box.setOrientation(LinearLayout.VERTICAL);
+                  box.setPadding(dp(16), dp(8), dp(16), dp(8));
+                  box.addView(slider(t("عرض کادرها", "Boxes width"), "box_w", 40, 140, 62, " dp", DLG, null));
+                  box.addView(slider(t("ارتفاع کادرها", "Boxes height"), "box_h", 28, 80, 40, " dp", DLG, null));
+                  box.addView(slider(t("اندازه اعداد", "Numbers size"), "box_ts", 10, 40, 18, " sp", DLG, null));
+                  box.addView(slider(t("کلفتی اعداد (۰ باریک تا ۳ کلفت)", "Numbers weight (0 thin to 3 bold)"), "box_tw", 0, 3, 3, "", DLG, null));
+                  Button b1 = new Button(this);
+                  b1.setText(t("رنگ و شفافیت کادرها", "Boxes color and transparency"));
+                  b1.setOnClickListener(w -> prefColorDialog("box_bg", 0x33FFFFFF,
+                          t("رنگ کادرها", "Boxes color")));
+                  Button b2 = new Button(this);
+                  b2.setText(t("رنگ اعداد", "Numbers color"));
+                  b2.setOnClickListener(w -> prefColorDialog("box_tc", fgc, t("رنگ اعداد", "Numbers color")));
+                  box.addView(b1);
+                  box.addView(b2);
+                  sv.addView(box);
+                  new AlertDialog.Builder(this).setTitle(t("تنظیمات کادرها", "Boxes settings")).setView(sv)
+                          .setPositiveButton(t("تأیید", "OK"), null)
+                          .setOnDismissListener(d -> show()).show();
+              }
+
+              View selectionBar(int fg) {
+                  LinearLayout b = new LinearLayout(this);
+                  b.setGravity(Gravity.CENTER_VERTICAL);
+                  b.addView(btn("✕", fg, v -> { sel.clear(); refreshCells(); updateSel(); }));
+                  selCount = new TextView(this);
+                  selCount.setTextColor(fg);
+                  selCount.setTextSize(18);
+                  selCount.setGravity(Gravity.CENTER);
+                  b.addView(selCount, new LinearLayout.LayoutParams(0, -2, 1));
+                  b.addView(btn(t("پوشه جدید", "New folder"), fg, v -> addFolderDialog(new ArrayList<>(sel))));
+                  b.addView(btn(t("حذف", "Remove"), fg, v -> {
+                      home.removeIf(q -> !q.folder && sel.contains(q.pkg));
+                      sel.clear();
+                      saveHome();
+                      show();
+                  }));
+                  return b;
+              }
+
+              void updateSel() {
+                  boolean on = !sel.isEmpty();
+                  normalBar.setVisibility(on ? View.GONE : View.VISIBLE);
+                  selBar.setVisibility(on ? View.VISIBLE : View.GONE);
+                  if (on) selCount.setText(String.valueOf(sel.size()));
+              }
+
+              void refreshCells() {
+                  for (Map.Entry<String, View> e : cells.entrySet()) {
+                      if (sel.contains(e.getKey())) {
+                          GradientDrawable g = new GradientDrawable();
+                          g.setCornerRadius(dp(18));
+                          g.setColor(0x553D7BF7);
+                          g.setStroke(dp(2), 0xFF3D7BF7);
+                          e.getValue().setBackground(g);
+                      } else {
+                          e.getValue().setBackground(null);
+                      }
+                  }
+              }
+
+              void toggleSel(String pkg) {
+                  if (!sel.remove(pkg)) sel.add(pkg);
+                  refreshCells();
+                  updateSel();
+              }
+
+              void dragStart(View w, String payload) {
+                  if (trashBtn != null) trashBtn.setAlpha(0.8f);
+                  ClipData cd = ClipData.newPlainText("vad", payload);
+                  w.startDragAndDrop(cd, new View.DragShadowBuilder(w), payload, 0);
+              }
+
+              ImageView styleAppIcon(Drawable d, int sizePx) {
+                  ImageView iv = new ImageView(this);
+                  iv.setImageDrawable(d);
+                  iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                  iv.setOutlineProvider(new ViewOutlineProvider() {
+                      @Override
+                      public void getOutline(View v, Outline o) {
+                          o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(18));
+                      }
+                  });
+                  iv.setClipToOutline(true);
+                  iv.setLayoutParams(new LinearLayout.LayoutParams(sizePx, sizePx));
+                  return iv;
+              }
+
+              LinearLayout cell(String pkg, int fg, int iconPx, int textSp, boolean showName, int cellH) {
+                  LinearLayout it = new LinearLayout(this);
+                  it.setOrientation(LinearLayout.VERTICAL);
+                  it.setGravity(Gravity.CENTER);
+                  it.setPadding(dp(2), dp(4), dp(2), dp(4));
+                  ImageView iv = styleAppIcon(icon(pkg), iconPx);
+                  it.addView(iv);
+                  if (showName) {
+                      TextView tv = new TextView(this);
+                      tv.setText(label(pkg));
+                      tv.setTextColor(fg);
+                      tv.setTextSize(textSp);
+                      tv.setMaxLines(1);
+                      tv.setEllipsize(TextUtils.TruncateAt.END);
+                      tv.setGravity(Gravity.CENTER);
+                      tv.setPadding(0, dp(4), 0, 0);
+                      it.addView(tv);
+                  }
+                  GridLayout.LayoutParams lp = new GridLayout.LayoutParams(
+                          GridLayout.spec(GridLayout.UNDEFINED, 1f),
+                          GridLayout.spec(GridLayout.UNDEFINED, 1f));
+                  lp.width = 0;
+                  if (cellH > 0) lp.height = cellH;
+                  it.setLayoutParams(lp);
+                  return it;
+              }
+
+              FrameLayout folderBox(Item f, int boxPx) {
+                  FrameLayout box = new FrameLayout(this);
+                  GradientDrawable g = new GradientDrawable();
+                  g.setCornerRadius(boxPx / 2.8f);
+                  g.setColor(f.color == 0x66FFFFFF ? 0x3A28282C : f.color);
+                  g.setStroke(dp(1), 0x22FFFFFF);
+                  box.setBackground(g);
+                  GridLayout mini = new GridLayout(this);
+                  mini.setColumnCount(2);
+                  int mp = Math.max(dp(4), (boxPx - dp(12)) / 2);
+                  int n = Math.min(4, f.apps.size());
+                  for (int i = 0; i < n; i++) {
+                      Drawable d = icon(f.apps.get(i));
+                      if (d == null) continue;
+                      ImageView iv = styleAppIcon(d, mp);
+                      GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+                      lp.width = mp;
+                      lp.height = mp;
+                      lp.setMargins(dp(1), dp(1), dp(1), dp(1));
+                      iv.setLayoutParams(lp);
+                      mini.addView(iv);
+                  }
+                  box.addView(mini, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+                  return box;
+              }
+
+              View gridScroll(final int fg) {
+                  DisplayMetrics dm = getResources().getDisplayMetrics();
+                  int cols = sp.getInt("gridCols", 4), rows = sp.getInt("gridRows", 7);
+                  boolean hide = sp.getBoolean("hideNames", false);
+                  int iconSz = sp.getInt("iconSz", 56);
+                  int folderSz = sp.getBoolean("folderSync", false) ? iconSz : sp.getInt("folderSz", 56);
+                  int cellW = (dm.widthPixels - dp(24)) / cols;
+                  int iconPx = Math.min(dp(iconSz), cellW - dp(4));
+                  int folderPx = Math.min(dp(folderSz), cellW - dp(4));
+                  int reserve = dp(150) + (sp.getBoolean("dockOn1", true) ? dp(sp.getInt("dockH1", 80) + 14) : 0);
+                  int cellH = Math.max((dm.heightPixels - reserve) / rows,
+                          Math.max(iconPx, folderPx) + (hide ? dp(10) : dp(30)));
+                  int ts = cols <= 5 ? 12 : (cols <= 8 ? 10 : 8);
+
+                  ScrollView sv = new ScrollView(this);
+                  LinearLayout col = new LinearLayout(this);
+                  col.setOrientation(LinearLayout.VERTICAL);
+                  GridLayout grid = new GridLayout(this);
+                  grid.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+                  grid.setColumnCount(cols);
+                  grid.setPadding(0, dp(12), 0, dp(44));
+                  int shown = 0;
+                  for (final Item item : home) {
+                      View c;
+                      if (item.folder) {
+                          c = folderCell(item, fg, folderPx, !hide, ts, cellH);
+                      } else {
+                          final String pkg = item.pkg;
+                          if (!installed(pkg)) continue;
+                          c = cell(pkg, fg, iconPx, ts, !hide, cellH);
+                          cells.put(pkg, c);
+                          c.setOnClickListener(w -> { if (sel.isEmpty()) launchApp(pkg); else toggleSel(pkg); });
+                          c.setOnLongClickListener(w -> {
+                              sel.add(pkg);
+                              refreshCells();
+                              updateSel();
+                              dragStart(w, "app:" + pkg);
+                              return true;
+                          });
+                      }
+                      makeDropTarget(c, item);
+                      grid.addView(c);
+                      shown++;
+                  }
+                  col.addView(grid);
+                  if (shown == 0) {
+                      TextView e = new TextView(this);
+                      e.setText(t("برای افزودن برنامه یا پوشه، دکمه + را بزنید", "Tap + to add apps or folders"));
+                      e.setTextColor(fg);
+                      e.setAlpha(0.7f);
+                      e.setPadding(0, dp(24), 0, 0);
+                      col.addView(e);
+                  }
+                  sv.addView(col);
+                  refreshCells();
+                  return sv;
+              }
+
+              View folderCell(final Item f, int fg, int boxPx, boolean showName, int ts, int cellH) {
+                  LinearLayout it = new LinearLayout(this);
+                  it.setOrientation(LinearLayout.VERTICAL);
+                  it.setGravity(Gravity.CENTER);
+                  it.setPadding(dp(2), dp(4), dp(2), dp(4));
+                  it.addView(folderBox(f, boxPx), new LinearLayout.LayoutParams(boxPx, boxPx));
+                  if (showName) {
+                      TextView tv = new TextView(this);
+                      tv.setText(folderTitle(f));
+                      tv.setTextColor(fg);
+                      tv.setTextSize(ts);
+                      tv.setMaxLines(1);
+                      tv.setEllipsize(TextUtils.TruncateAt.END);
+                      tv.setGravity(Gravity.CENTER);
+                      tv.setPadding(0, dp(4), 0, 0);
+                      it.addView(tv);
+                  }
+                  GridLayout.LayoutParams lp = new GridLayout.LayoutParams(
+                          GridLayout.spec(GridLayout.UNDEFINED, 1f),
+                          GridLayout.spec(GridLayout.UNDEFINED, 1f));
+                  lp.width = 0;
+                  lp.height = cellH;
+                  it.setLayoutParams(lp);
+                  it.setOnClickListener(w -> openFolderFrom(w, f.id));
+                  it.setOnLongClickListener(w -> { dragStart(w, "folder:" + f.id); return true; });
+                  return it;
+              }
+
+              void openFolderFrom(View w, String id) {
+                  int[] loc = new int[2];
+                  w.getLocationOnScreen(loc);
+                  openCx = loc[0] + w.getWidth() / 2;
+                  openCy = loc[1] + w.getHeight() / 2;
+                  openFolder = id;
+                  editName = false;
+                  folderSettings = false;
+                  animFolder = true;
+                  show();
+              }
+
+              void closeFolder() {
+                  if (curPanel != null) {
+                      View p = curPanel;
+                      curPanel = null;
+                      p.animate().scaleX(0.15f).scaleY(0.15f).alpha(0f).setDuration(200)
+                              .withEndAction(() -> {
+                                  openFolder = null;
+                                  editName = false;
+                                  folderSettings = false;
+                                  show();
+                              }).start();
+                  } else {
+                      openFolder = null;
+                      editName = false;
+                      folderSettings = false;
+                      show();
+                  }
+              }
+
+              void makeDropTarget(View c, final Item target) {
+                  c.setOnDragListener((w, ev) -> {
+                      switch (ev.getAction()) {
+                          case DragEvent.ACTION_DRAG_STARTED:
+                              return true;
+                          case DragEvent.ACTION_DRAG_ENTERED:
+                              w.setAlpha(0.55f);
+                              return true;
+                          case DragEvent.ACTION_DRAG_EXITED:
+                          case DragEvent.ACTION_DRAG_ENDED:
+                              w.setAlpha(1f);
+                              if (trashBtn != null) trashBtn.setAlpha(0f);
+                              return true;
+                          case DragEvent.ACTION_DROP:
+                              w.setAlpha(1f);
+                              dropOnItem(ev.getClipData().getItemAt(0).getText().toString(), target);
+                              return true;
+                      }
+                      return false;
+                  });
+              }
+
+              void dropOnItem(String payload, Item target) {
+                  if (payload.startsWith("folder:")) {
+                      Item d = findFolder(payload.substring(7));
+                      if (d == null || d == target) return;
+                      home.remove(d);
+                      home.add(Math.max(0, home.indexOf(target)), d);
+                  } else {
+                      final String p = payload.substring(4);
+                      if (!target.folder && p.equals(target.pkg)) return;
+                      for (Item it : home) if (it.folder) it.apps.remove(p);
+                      home.removeIf(q -> !q.folder && p.equals(q.pkg));
+                      if (target.folder) {
+                          if (!target.apps.contains(p)) target.apps.add(p);
+                      } else {
+                          Item a = new Item();
+                          a.pkg = p;
+                          home.add(Math.max(0, home.indexOf(target)), a);
+                      }
+                  }
+                  sel.clear();
+                  saveHome();
+                  postShow();
+              }
+
+              View trashView() {
+                  TextView tr = new TextView(this);
+                  tr.setText("🗑");
+                  tr.setTextSize(18);
+                  tr.setGravity(Gravity.CENTER);
+                  tr.setBackground(oval(0x44888888));
+                  tr.setAlpha(0f);
+                  tr.setOnDragListener((w, ev) -> {
+                      switch (ev.getAction()) {
+                          case DragEvent.ACTION_DRAG_STARTED:
+                              w.setAlpha(0.8f);
+                              return true;
+                          case DragEvent.ACTION_DRAG_ENTERED:
+                              w.setScaleX(1.3f);
+                              w.setScaleY(1.3f);
+                              w.setAlpha(1f);
+                              return true;
+                          case DragEvent.ACTION_DRAG_EXITED:
+                              w.setScaleX(1f);
+                              w.setScaleY(1f);
+                              w.setAlpha(0.8f);
+                              return true;
+                          case DragEvent.ACTION_DRAG_ENDED:
+                              w.setAlpha(0f);
+                              w.setScaleX(1f);
+                              w.setScaleY(1f);
+                              return true;
+                          case DragEvent.ACTION_DROP:
+                              trashDrop(ev.getClipData().getItemAt(0).getText().toString());
+                              return true;
+                      }
+                      return false;
+                  });
+                  return tr;
+              }
+
+              void trashDrop(String payload) {
+                  if (payload.startsWith("app:")) {
+                      final String p = payload.substring(4);
+                      for (Item it : home) if (it.folder) it.apps.remove(p);
+                      home.removeIf(q -> !q.folder && p.equals(q.pkg));
+                      for (List<String> l : dock1) l.remove(p);
+                      for (List<String> l : dock2) l.remove(p);
+                      saveHome();
+                      saveDock(1);
+                      saveDock(2);
+                      postShow();
+                  } else {
+                      final Item f = findFolder(payload.substring(7));
+                      if (f == null) return;
+                      if (f.apps.isEmpty()) {
+                          deleteFolder(f, false);
+                          return;
+                      }
+                      new AlertDialog.Builder(this).setTitle(t("حذف پوشه", "Delete folder"))
+                              .setMessage(t("با برنامه‌های داخل پوشه چه کنم؟", "What should happen to the apps inside?"))
+                              .setPositiveButton(t("حذف با برنامه‌ها", "Delete with apps"), (d, w) -> deleteFolder(f, false))
+                              .setNeutralButton(t("انتقال برنامه‌ها به صفحه اصلی", "Move apps to home"), (d, w) -> deleteFolder(f, true))
+                              .setNegativeButton(t("لغو", "Cancel"), null).show();
+                  }
+              }
+
+              void deleteFolder(Item f, boolean keepApps) {
+                  int idx = home.indexOf(f);
+                  home.remove(f);
+                  if (keepApps) {
+                      List<Item> back = new ArrayList<>();
+                      for (String p : f.apps) {
+                          Item a = new Item();
+                          a.pkg = p;
+                          back.add(a);
+                      }
+                      home.addAll(Math.max(0, Math.min(idx, home.size())), back);
+                  }
+                  for (List<String> l : dock1) l.remove("folder:" + f.id);
+                  for (List<String> l : dock2) l.remove("folder:" + f.id);
+                  if (f.id.equals(openFolder)) openFolder = null;
+                  saveHome();
+                  saveDock(1);
+                  saveDock(2);
+                  postShow();
+              }
+
+              View plusMenu(final int fg) {
+                  FrameLayout wrap = new FrameLayout(this);
+                  View scrim = new View(this);
+                  scrim.setOnClickListener(w -> {
+                      wrap.animate().alpha(0f).scaleX(0.8f).scaleY(0.8f).setDuration(180)
+                              .withEndAction(() -> { plusOpen = false; show(); }).start();
+                  });
+                  wrap.addView(scrim, new FrameLayout.LayoutParams(-1, -1));
+                  LinearLayout m = new LinearLayout(this);
+                  m.setOrientation(LinearLayout.VERTICAL);
+                  m.setPadding(dp(12), dp(10), dp(16), dp(10));
+                  GradientDrawable g = new GradientDrawable();
+                  g.setCornerRadius(dp(22));
+                  g.setColor(0xF5222228);
+                  g.setStroke(dp(1), 0x33888888);
+                  m.setBackground(g);
+                  m.addView(menuRow(0xFF3D7BF7, "+", t("افزودن برنامه", "Add app"), fg, w -> {
+                      plusOpen = false;
+                      openPicker(null);
+                  }));
+                  m.addView(menuRow(0xFFFB8C00, "📁", t("افزودن پوشه", "Add folder"), fg, w -> {
+                      plusOpen = false;
+                      addFolderDialog(new ArrayList<String>());
+                  }));
+                  FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT | Gravity.TOP);
+                  lp.setMargins(0, dp(4), dp(4), 0);
+                  wrap.addView(m, lp);
+
+                  wrap.setAlpha(0f);
+                  wrap.setScaleX(0.8f);
+                  wrap.setScaleY(0.8f);
+                  wrap.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(220)
+                          .setInterpolator(new DecelerateInterpolator()).start();
+
+                  return wrap;
+              }
+
+              View menuRow(int color, String sym, String label, int fg, View.OnClickListener c) {
+                  LinearLayout r = new LinearLayout(this);
+                  r.setGravity(Gravity.CENTER_VERTICAL);
+                  r.setPadding(dp(4), dp(6), dp(4), dp(6));
+                  TextView d = new TextView(this);
+                  d.setText(sym);
+                  d.setTextSize(18);
+                  d.setTextColor(0xFFFFFFFF);
+                  d.setGravity(Gravity.CENTER);
+                  d.setBackground(oval(color));
+                  LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(dp(38), dp(38));
+                  dl.setMarginEnd(dp(12));
+                  r.addView(d, dl);
+                  TextView tv = new TextView(this);
+                  tv.setText(label);
+                  tv.setTextSize(15);
+                  tv.setTextColor(fg);
+                  r.addView(tv);
+                  r.setOnClickListener(c);
+                  return r;
+              }
+
+              void addFolderDialog(final List<String> initial) {
+                  final EditText et = new EditText(this);
+                  et.setHint(t("نام پوشه", "Folder name"));
+                  et.setSingleLine(true);
+                  LinearLayout box = new LinearLayout(this);
+                  box.setPadding(dp(20), dp(8), dp(20), 0);
+                  box.addView(et, new LinearLayout.LayoutParams(-1, -2));
+                  new AlertDialog.Builder(this).setTitle(t("پوشه جدید", "New folder")).setView(box)
+                          .setPositiveButton(t("تأیید", "OK"), (d, w) -> {
+                              Item f = new Item();
+                              f.folder = true;
+                              f.id = "f" + System.currentTimeMillis();
+                              f.name = et.getText().toString().trim();
+                              f.color = 0x3A28282C;
+                              f.apps.addAll(initial);
+                              int idx = home.size();
+                              if (!initial.isEmpty()) {
+                                  for (int i = 0; i < home.size(); i++) {
+                                      if (!home.get(i).folder && initial.contains(home.get(i).pkg)) { idx = i; break; }
+                                  }
+                                  home.removeIf(q -> !q.folder && initial.contains(q.pkg));
+                              }
+                              home.add(Math.min(idx, home.size()), f);
+                              sel.clear();
+                              saveHome();
+                              show();
+                          }).setNegativeButton(t("لغو", "Cancel"), null).show();
+              }
+
+              View folderPopup(final int fg) {
+                  final Item f = findFolder(openFolder);
+                  final FrameLayout wrap = new FrameLayout(this);
+                  if (f == null) { openFolder = null; return wrap; }
+                  final boolean anim = animFolder;
+                  animFolder = false;
+                  final boolean animS = animSettings;
+                  animSettings = false;
+                  DisplayMetrics dm = getResources().getDisplayMetrics();
+                  View scrim = new View(this);
+                  scrim.setBackgroundColor((sp.getInt("fpDim", 25) * 255 / 100) << 24);
+                  scrim.setOnClickListener(w -> closeFolder());
+                  wrap.addView(scrim, new FrameLayout.LayoutParams(-1, -1));
+                  if (anim) {
+                      scrim.setAlpha(0f);
+                      scrim.animate().alpha(1f).setDuration(240).start();
+                  }
+                  int fpSize = sp.getInt("fpSize", 100);
+                  int pw = (int) Math.min(dm.widthPixels - dp(24),
+                          Math.max(dp(220), dm.widthPixels / 2) * fpSize / 100f);
+                  final int ph = (int) Math.min(dm.heightPixels * 0.7f, dm.heightPixels * 0.36f * fpSize / 100f);
+                  final LinearLayout panel = new LinearLayout(this);
+                  panel.setOrientation(LinearLayout.VERTICAL);
+                  GradientDrawable pg = new GradientDrawable();
+                  pg.setCornerRadius(dp(26));
+                  pg.setColor((f.color & 0x00FFFFFF) | ((sp.getInt("fpAlpha", 80) * 255 / 100) << 24));
+                  pg.setStroke(dp(1), 0x33FFFFFF);
+                  panel.setBackground(pg);
+                  panel.setPadding(dp(12), dp(12), dp(12), dp(12));
+                  panel.setClickable(true);
+                  curPanel = panel;
+
+                  FrameLayout hd = new FrameLayout(this);
+                  if (!editName) {
+                      TextView nm = new TextView(this);
+                      nm.setText(folderTitle(f));
+                      nm.setTextSize(14);
+                      nm.setTextColor(fg);
+                      nm.setTypeface(null, Typeface.BOLD);
+                      nm.setMaxWidth(dp(90));
+                      nm.setSingleLine(true);
+                      nm.setEllipsize(TextUtils.TruncateAt.END);
+                      nm.setOnClickListener(w -> { editName = true; show(); });
+                      hd.addView(nm, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+                  } else {
+                      LinearLayout er = new LinearLayout(this);
+                      er.setGravity(Gravity.CENTER_VERTICAL);
+                      final EditText en = new EditText(this);
+                      en.setText(f.name);
+                      en.setTextSize(13);
+                      en.setTextColor(fg);
+                      en.setSingleLine(true);
+                      en.setSelectAllOnFocus(true);
+                      en.setPadding(dp(4), 0, dp(4), 0);
+                      er.addView(en, new LinearLayout.LayoutParams(dp(72), -2));
+                      TextView ok = new TextView(this);
+                      ok.setText("✓");
+                      ok.setTextSize(14);
+                      ok.setTextColor(0xFFFFFFFF);
+                      ok.setGravity(Gravity.CENTER);
+                      ok.setBackground(oval(0xFF34C759));
+                      ok.setOnClickListener(w -> {
+                          f.name = en.getText().toString().trim();
+                          saveHome();
+                          editName = false;
+                          show();
+                      });
+                      LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(dp(26), dp(26));
+                      ol.setMarginStart(dp(4));
+                      er.addView(ok, ol);
+                      hd.addView(er, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+                      en.postDelayed(() -> {
+                          en.requestFocus();
+                          android.view.inputmethod.InputMethodManager im =
+                                  (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                          im.showSoftInput(en, 0);
+                      }, 150);
+                  }
+                  TextView pl = new TextView(this);
+                  pl.setText("+");
+                  pl.setTextSize(22);
+                  pl.setGravity(Gravity.CENTER);
+                  pl.setTextColor(fg);
+                  pl.setOnClickListener(w -> openPicker(f.id));
+                  FrameLayout.LayoutParams pll = new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+                  pll.setMargins(0, 0, dp(32), 0);
+                  hd.addView(pl, pll);
+                  ImageView gr = new ImageView(this);
+                  gr.setImageResource(R.drawable.ic_gear);
+                  gr.setColorFilter(fg);
+                  gr.setPadding(dp(3), dp(3), dp(3), dp(3));
+                  gr.setOnClickListener(w -> {
+                      folderSettings = !folderSettings;
+                      animSettings = folderSettings;
+                      show();
+                  });
+                  hd.addView(gr, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.RIGHT | Gravity.CENTER_VERTICAL));
+                  panel.addView(hd, new LinearLayout.LayoutParams(-1, dp(32)));
+
+                  if (folderSettings) {
+                      compact = true;
+                      ScrollView ss = new ScrollView(this);
+                      LinearLayout sb = new LinearLayout(this);
+                      sb.setOrientation(LinearLayout.VERTICAL);
+                      sb.addView(row(f.color | 0xFF000000, "🎨", t("رنگ", "Color"), null, 0, fg, w ->
+                              colorDialog(t("رنگ پوشه", "Folder color"), f.color, c -> {
+                                  f.color = c;
+                                  saveHome();
+                                  show();
+                              })));
+                      Runnable rs = () -> show();
+                      sb.addView(slider(t("تعداد ستون‌ها", "Columns count"), "fpCols", 3, 8, 3, "", fg, rs));
+                      sb.addView(slider(t("فاصله افقی ردیف‌ها", "Row spacing"), "fpRowGap", 0, 10, 2, " mm", fg, rs));
+                      sb.addView(slider(t("اندازه پوشه", "Folder size"), "fpSize", 60, 150, 100, "%", fg, rs));
+                      sb.addView(slider(t("شفافیت پوشه", "Folder opacity"), "fpAlpha", 10, 100, 80, "%", fg, rs));
+                      sb.addView(slider(t("مات بودن پس‌زمینه", "Backdrop dim"), "fpDim", 0, 90, 25, "%", fg, rs));
+                      sb.addView(slider(t("اندازه آیکون‌ها", "Icon size"), "fpIcon", 24, 72, 40, " dp", fg, rs));
+                      final boolean nmOn = sp.getInt("fpNames", 1) == 1;
+                      sb.addView(row(0xFF42A5F5, "🏷", t("نام آیکون‌ها", "Icon names"), null, nmOn ? 3 : 2, fg, w -> {
+                          sp.edit().putInt("fpNames", nmOn ? 0 : 1).apply();
+                          show();
+                      }));
+                      compact = false;
+                      ss.addView(sb);
+                      panel.addView(ss, new LinearLayout.LayoutParams(-1, 0, 1));
+                      if (animS) {
+                          ss.setTranslationY(-dp(40));
+                          ss.setAlpha(0f);
+                          ss.animate().translationY(0).alpha(1f).setDuration(260)
+                                  .setInterpolator(new DecelerateInterpolator()).start();
+                      }
+                  } else {
+                      ScrollView bs = new ScrollView(this);
+                      GridLayout grid3 = new GridLayout(this);
+                      grid3.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+                      int fpCols = sp.getInt("fpCols", 3);
+                      int fpRowGap = sp.getInt("fpRowGap", 2);
+                      grid3.setColumnCount(fpCols);
+                      grid3.setPadding(0, dp(fpRowGap), 0, dp(fpRowGap));
+                      boolean nmShow = sp.getInt("fpNames", 1) == 1;
+                      int ip = dp(sp.getInt("fpIcon", 40));
+                      for (final String pkg : f.apps) {
+                          if (!installed(pkg)) continue;
+                          View c = cell(pkg, fg, ip, 10, nmShow, 0);
+                          c.setOnClickListener(w -> launchApp(pkg));
+                          c.setOnLongClickListener(w -> { dragStart(w, "app:" + pkg); return true; });
+                          c.setOnDragListener((w, ev) -> {
+                              if (ev.getAction() == DragEvent.ACTION_DRAG_ENDED && !ev.getResult()
+                                      && ("app:" + pkg).equals(ev.getLocalState())) {
+                                  removeFromFolderDialog(f, pkg);
+                              }
+                              return true;
+                          });
+                          grid3.addView(c);
+                      }
+                      bs.addView(grid3);
+                      panel.addView(bs, new LinearLayout.LayoutParams(-1, 0, 1));
+                      if (f.apps.isEmpty()) {
+                          TextView e = new TextView(this);
+                          e.setText(t("با دکمه + برنامه اضافه کنید", "Use + to add apps"));
+                          e.setTextColor(fg);
+                          e.setTextSize(12);
+                          e.setAlpha(0.7f);
+                          e.setGravity(Gravity.CENTER);
+                          panel.addView(e, 1);
+                      }
+                  }
+                  wrap.addView(panel, new FrameLayout.LayoutParams(pw, ph, Gravity.CENTER));
+                  if (anim) {
+                      panel.setAlpha(0f);
+                      panel.setScaleX(0.15f);
+                      panel.setScaleY(0.15f);
+                  }
+                  panel.post(() -> {
+                      int[] wl = new int[2];
+                      wrap.getLocationOnScreen(wl);
+                      panel.setPivotX(openCx - (wl[0] + (wrap.getWidth() - panel.getWidth()) / 2f));
+                      panel.setPivotY(openCy - (wl[1] + (wrap.getHeight() - panel.getHeight()) / 2f));
+                      if (anim) {
+                          panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(300)
+                                  .setInterpolator(new DecelerateInterpolator()).start();
+                      }
+                  });
+                  return wrap;
+              }
+
+              void removeFromFolderDialog(final Item f, final String pkg) {
+                  new AlertDialog.Builder(this).setTitle(t("حذف از پوشه؟", "Remove from folder?"))
+                          .setMessage(label(pkg))
+                          .setPositiveButton(t("حذف", "Remove"), (d, w) -> {
+                              f.apps.remove(pkg);
+                              Item a = new Item();
+                              a.pkg = pkg;
+                              home.add(a);
+                              saveHome();
+                              show();
+                          }).setNegativeButton(t("لغو", "Cancel"), null).show();
+              }
+
+              // ================= dock =================
+              View buildDock(final int num, int fg) {
+                  if (!sp.getBoolean("dockOn" + num, true)) {
+                      if (num == 1) dockHolder1 = null; else dockHolder2 = null;
+                      return null;
+                  }
+                  FrameLayout holder = new FrameLayout(this);
+                  if (num == 1) dockHolder1 = holder; else dockHolder2 = holder;
+                  fillDock(num);
+                  return holder;
+              }
+
+              void fillDock(final int num) {
+                  final FrameLayout holder = (num == 1) ? dockHolder1 : dockHolder2;
+                  if (holder == null) return;
+                  holder.removeAllViews();
+                  final int count = sp.getInt("dockCount" + num, 4);
+                  final int pages = sp.getInt("dockPages" + num, 1);
+                  int h = sp.getInt("dockH" + num, 90);
+                  int alpha = sp.getInt("dockA" + num, 25);
+                  int iconSz = sp.getInt("dockI" + num, 52);
+                  int wPct = sp.getInt("dockW" + num, 96);
+                  int sw = getResources().getDisplayMetrics().widthPixels - dp(24);
+                  final int pageW = (int) (sw * wPct / 100f);
+                  FrameLayout box = new FrameLayout(this);
+                  GradientDrawable g = new GradientDrawable();
+                  g.setCornerRadius(dp(36));
+                  g.setColor(((alpha * 255 / 100) << 24) | 0x00FFFFFF);
+                  g.setStroke(dp(1), 0x22FFFFFF);
+                  box.setBackground(g);
+                  final HorizontalScrollView hs = new HorizontalScrollView(this);
+                  hs.setHorizontalScrollBarEnabled(false);
+                  hs.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+                  LinearLayout rowL = new LinearLayout(this);
+                  rowL.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+                  int total = 0;
+                  int sz = Math.max(dp(16), Math.min(dp(iconSz), pageW / count - dp(6)));
+                  for (int pi = 0; pi < pages; pi++) {
+                      LinearLayout pg = new LinearLayout(this);
+                      pg.setGravity(Gravity.CENTER_VERTICAL);
+                      final List<String> l = dockPageList(num, pi);
+                      for (int k = 0; k < count; k++) {
+                          FrameLayout slot = new FrameLayout(this);
+                          if (k < l.size()) {
+                              final String e = l.get(k);
+                              View iv = null;
+                              String nm = e;
+                              if (e.startsWith("folder:")) {
+                                  final Item f = findFolder(e.substring(7));
+                                  if (f != null) {
+                                      iv = folderBox(f, sz);
+                                      iv.setOnClickListener(w -> openFolderFrom(w, f.id));
+                                      nm = folderTitle(f);
+                                  }
+                              } else if (installed(e)) {
+                                  ImageView im = styleAppIcon(icon(e), sz);
+                                  im.setOnClickListener(w -> launchApp(e));
+                                  iv = im;
+                                  nm = label(e);
+                              }
+                              if (iv != null) {
+                                  total++;
+                                  final String title = nm;
+                                  iv.setOnLongClickListener(w -> {
+                                      new AlertDialog.Builder(this).setTitle(t("حذف از دوک؟", "Remove from dock?"))
+                                              .setMessage(title)
+                                              .setPositiveButton(t("حذف", "Remove"), (d, x) -> {
+                                                  l.remove(e);
+                                                  saveDock(num);
+                                                  fillDock(num);
+                                              }).setNegativeButton(t("لغو", "Cancel"), null).show();
+                                      return true;
+                                  });
+                                  slot.addView(iv, new FrameLayout.LayoutParams(sz, sz, Gravity.CENTER));
+                              }
+                          }
+                          pg.addView(slot, new LinearLayout.LayoutParams(0, -1, 1));
+                      }
+                      rowL.addView(pg, new LinearLayout.LayoutParams(pageW, -1));
+                  }
+                  hs.addView(rowL);
+                  hs.setOnTouchListener((w, ev) -> {
+                      int a = ev.getAction();
+                      if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) {
+                          w.postDelayed(() -> {
+                              int p = Math.round(hs.getScrollX() / (float) pageW);
+                              if (num == 1) dockPage1 = Math.max(0, Math.min(pages - 1, p));
+                              else dockPage2 = Math.max(0, Math.min(pages - 1, p));
+                              hs.smoothScrollTo((num == 1 ? dockPage1 : dockPage2) * pageW, 0);
+                          }, 100);
+                      }
+                      return false;
+                  });
+                  hs.post(() -> hs.scrollTo(Math.min(num == 1 ? dockPage1 : dockPage2, pages - 1) * pageW, 0));
+                  box.addView(hs, new FrameLayout.LayoutParams(-1, -1));
+                  if (total == 0) {
+                      TextView hint = new TextView(this);
+                      hint.setText(t("برنامه یا پوشه را نگه دارید و اینجا بکشید", "Hold an app or folder and drag it here"));
+                      hint.setTextSize(12);
+                      hint.setTextColor(fgc);
+                      hint.setAlpha(0.6f);
+                      box.addView(hint, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+                  }
+                  box.setOnDragListener((w, ev) -> {
+                      switch (ev.getAction()) {
+                          case DragEvent.ACTION_DRAG_STARTED:
+                              return true;
+                          case DragEvent.ACTION_DRAG_ENTERED:
+                              w.setAlpha(0.7f);
+                              return true;
+                          case DragEvent.ACTION_DRAG_EXITED:
+                          case DragEvent.ACTION_DRAG_ENDED:
+                              w.setAlpha(1f);
+                              if (trashBtn != null) trashBtn.setAlpha(0f);
+                              return true;
+                          case DragEvent.ACTION_DROP:
+                              w.setAlpha(1f);
+                              addToDock(num, ev.getClipData().getItemAt(0).getText().toString());
+                              return true;
+                      }
+                      return false;
+                  });
+                  holder.addView(box, new FrameLayout.LayoutParams(pageW, dp(h), Gravity.CENTER_HORIZONTAL));
+              }
+
+              void addToDock(int num, String payload) {
+                  List<List<String>> d1 = dock1, d2 = dock2;
+                  String entry = payload.startsWith("app:") ? payload.substring(4) : payload;
+
+                  if (payload.startsWith("folder:")) {
+                      Item f = findFolder(payload.substring(7));
+                      if (f != null) home.remove(f);
+                  }
+
+                  int count = sp.getInt("dockCount" + num, 4), pages = sp.getInt("dockPages" + num, 1);
+                  for (List<String> l : d1) {
+                      if (l.contains(entry)) {
+                          Toast.makeText(this, t("قبلاً در دوک ۱ هست", "Already in dock 1"), Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+                  }
+                  for (List<String> l : d2) {
+                      if (l.contains(entry)) {
+                          Toast.makeText(this, t("قبلاً در دوک ۲ هست", "Already in dock 2"), Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+                  }
+                  int curPage = (num == 1) ? dockPage1 : dockPage2;
+                  List<String> l = dockPageList(num, Math.min(curPage, pages - 1));
+                  if (l.size() >= count) {
+                      Toast.makeText(this, t("این صفحه دوک پر است", "This dock page is full"), Toast.LENGTH_SHORT).show();
+                      return;
+                  }
+                  l.add(entry);
+                  saveHome();
+                  saveDock(num);
+                  postShow();
+              }
+
+              // ================= launching =================
+              void launchApp(String pkg) {
+                  Intent li = getPackageManager().getLaunchIntentForPackage(pkg);
+                  if (li == null) return;
+                  startActivity(li);
+                  int mode = sp.getInt("mode", 0);
+                  if (mode == 0) {
+                      finish();
+                  } else if (mode == 2) {
+                      finishAndRemoveTask();
+                      android.os.Process.killProcess(android.os.Process.myPid());
+                      System.exit(0);
+                  }
+              }
+
+              // ================= settings =================
+              View settingsPage(int fg) {
+                  LinearLayout r = vbox();
+                  r.addView(topBar(t("تنظیمات", "Settings"), fg));
+                  r.addView(row(0xFF5C6BC0, "🎨", t("پس‌زمینه", "Background"), null, 0, fg,
+                          v -> { page = BG; show(); }));
+                  r.addView(row(0xFFFF9800, "🚀", t("رفتار لانچر", "Launcher Behavior"), null, 0, fg,
+                          v -> { page = BEHAVIOR; show(); }));
+                  r.addView(row(0xFF29B6F6, "⚓", t("دوک", "Dock"), null, 0, fg,
+                          v -> { page = DOCK; show(); }));
+                  r.addView(row(0xFFAB47BC, "🧩", t("آیکون", "Icon"), null, 0, fg,
+                          v -> { page = ICON; show(); }));
+                  r.addView(row(0xFF26A69A, "⚡", t("میانبر", "Shortcut"),
+                          t("افزودن کلید Vad به پنل تنظیمات سریع", "Add the Vad button to Quick Settings"),
+                          sp.getBoolean("tile", false) ? 3 : 2, fg,
+                          v -> setTile(!sp.getBoolean("tile", false))));
+                  r.addView(row(0xFFEC407A, "🌐", t("زبان", "Language"), fa ? "فارسی" : "English", 0, fg,
+                          v -> { page = LANG; show(); }));
+                  ScrollView sv = new ScrollView(this);
+                  sv.setBackgroundColor(bg);
+                  sv.addView(r);
+                  return sv;
+              }
+
+              void setTile(boolean on) {
+                  ComponentName cn = new ComponentName(this, VadTile.class);
+                  getPackageManager().setComponentEnabledSetting(cn,
+                          on ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                  : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                          PackageManager.DONT_KILL_APP);
+                  sp.edit().putBoolean("tile", on).apply();
+                  if (on) {
+                      final String manual = t("پنل تنظیمات سریع را باز کنید، ویرایش را بزنید و Vad را اضافه کنید.",
+                              "Open Quick Settings, tap edit and add Vad.");
+                      if (Build.VERSION.SDK_INT >= 33) {
+                          container.postDelayed(() -> {
+                              try {
+                                  StatusBarManager sbm = (StatusBarManager) getSystemService("statusbar");
+                                  sbm.requestAddTileService(new ComponentName(this, VadTile.class), "Vad",
+                                          Icon.createWithResource(this, R.drawable.ic_tile),
+                                          getMainExecutor(), r -> { });
+                              } catch (Exception e) {
+                                  Toast.makeText(this, manual, Toast.LENGTH_LONG).show();
+                              }
+                          }, 600);
+                      } else {
+                          Toast.makeText(this, manual, Toast.LENGTH_LONG).show();
+                      }
+                  }
+                  show();
+              }
+
+              View bgPage(final int fg) {
+                  LinearLayout p = vbox();
+                  p.addView(topBar(t("پس‌زمینه", "Background"), fg));
+                  TextView tt = new TextView(this);
+                  tt.setText(t("رنگ پس‌زمینه:", "Background color:"));
+                  tt.setTextColor(fg);
+                  tt.setPadding(0, dp(16), 0, 0);
+                  p.addView(tt);
+                  HorizontalScrollView hs = new HorizontalScrollView(this);
+                  LinearLayout r = new LinearLayout(this);
+                  final ColorPicker cp = new ColorPicker(this);
+                  final EditText et = new EditText(this);
+                  for (final int c : colors) {
+                      View sw = new View(this);
+                      GradientDrawable g = oval(c);
+                      g.setStroke(dp(2), 0x88888888);
+                      sw.setBackground(g);
+                      LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(44), dp(44));
+                      lp.setMargins(dp(6), dp(8), dp(6), dp(8));
+                      sw.setLayoutParams(lp);
+                      sw.setOnClickListener(v -> setBg(c));
+                      r.addView(sw);
+                  }
+                  hs.addView(r);
+                  p.addView(hs);
+
+                  TextView t2 = new TextView(this);
+                  t2.setText(t("انتخاب دلخواه (رنگ و شفافیت):", "Custom color (with transparency):"));
+                  t2.setTextColor(fg);
+                  t2.setPadding(0, dp(16), 0, dp(8));
+                  p.addView(t2);
+                  cp.setColor(bg);
+                  cp.setListener(c -> et.setText(hex(c)));
+                  p.addView(cp, new LinearLayout.LayoutParams(-1, -2));
+
+                  LinearLayout r2 = new LinearLayout(this);
+                  et.setText(hex(bg));
+                  et.setHintTextColor(0x88888888);
+                  et.setTextColor(fg);
+                  et.setSingleLine(true);
+                  et.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 2));
+                  r2.addView(et);
+                  r2.addView(btn(t("اعمال", "Apply"), fg, v -> {
+                      try { setBg(Color.parseColor(et.getText().toString().trim())); }
+                      catch (Exception e) {
+                          Toast.makeText(this, t("کد رنگ نامعتبر است", "Invalid color code"),
+                                  Toast.LENGTH_SHORT).show();
+                      }
+                  }));
+                  p.addView(r2);
+                  ScrollView sv = new ScrollView(this);
+                  sv.setBackgroundColor(bg);
+                  sv.addView(p);
+                  return sv;
+              }
+
+              void setBg(int c) {
+                  bg = c;
+                  sp.edit().putInt("bg", bg).apply();
+                  show();
+              }
+
+              View behaviorPage(int fg) {
+                  LinearLayout r = vbox();
+                  r.addView(topBar(t("رفتار لانچر", "Launcher Behavior"), fg));
+                  int m = sp.getInt("mode", 0);
+                  r.addView(row(0xFF43A047, "🚪", t("رفتن لانچر", "Launcher Goes"),
+                          t("با انتخاب برنامه، لانچر بسته می‌شود", "Launcher closes when you open an app"),
+                          m == 0 ? 1 : 0, fg, v -> { sp.edit().putInt("mode", 0).apply(); show(); }));
+                  r.addView(row(0xFF1E88E5, "📌", t("ماندن لانچر", "Launcher Stays"),
+                          t("لانچر بسته نمی‌شود و هنگام برگشت پشت برنامه باز می‌ماند",
+                                  "Launcher stays open behind the app"),
+                          m == 1 ? 1 : 0, fg, v -> { sp.edit().putInt("mode", 1).apply(); show(); }));
+                  r.addView(row(0xFFE53935, "🛑", t("بستن کامل", "Full Close"),
+                          t("پس از اجرای برنامه، فرآیند لانچر از پس‌زمینه و حافظه رم کاملاً خارج می‌شود",
+                                  "Terminates the launcher process completely upon app launch"),
+                          m == 2 ? 1 : 0, fg, v -> { sp.edit().putInt("mode", 2).apply(); show(); }));
+                  return r;
+              }
+
+              View dockPageView(int fg) {
+                  LinearLayout r = vbox();
+                  r.addView(topBar(t("دوک", "Dock"), fg));
+
+                  TextView d1Tag = new TextView(this);
+                  d1Tag.setText(t("--- تنظیمات دوک ۱ ---", "--- Dock 1 Settings ---"));
+                  d1Tag.setTextColor(fg);
+                  d1Tag.setPadding(0, dp(10), 0, dp(6));
+                  r.addView(d1Tag);
+
+                  boolean on1 = sp.getBoolean("dockOn1", true);
+                  r.addView(row(0xFF8E24AA, "👁", t("نمایش دوک ۱", "Show dock 1"), null, on1 ? 3 : 2, fg,
+                          v -> { sp.edit().putBoolean("dockOn1", !on1).apply(); show(); }));
+                  r.addView(slider(t("برنامه‌های هر صفحه دوک ۱", "Apps per dock 1 page"), "dockCount1", 4, 10, 4, "", fg, null));
+                  r.addView(slider(t("صفحه‌های دوک ۱", "Dock 1 pages"), "dockPages1", 1, 5, 1, "", fg, null));
+                  r.addView(slider(t("ارتفاع دوک ۱", "Dock 1 height"), "dockH1", 56, 140, 90, " dp", fg, null));
+                  r.addView(slider(t("عرض دوک ۱", "Dock 1 width"), "dockW1", 60, 100, 96, "%", fg, null));
+                  r.addView(slider(t("شفافیت دوک ۱", "Dock 1 opacity"), "dockA1", 0, 100, 25, "%", fg, null));
+                  r.addView(slider(t("اندازه آیکون‌های دوک ۱", "Dock 1 icon size"), "dockI1", 24, 64, 52, " dp", fg, null));
+
+                  TextView d2Tag = new TextView(this);
+                  d2Tag.setText(t("--- تنظیمات دوک ۲ ---", "--- Dock 2 Settings ---"));
+                  d2Tag.setTextColor(fg);
+                  d2Tag.setPadding(0, dp(16), 0, dp(6));
+                  r.addView(d2Tag);
+
+                  boolean on2 = sp.getBoolean("dockOn2", true);
+                  r.addView(row(0xFF26A69A, "👁", t("نمایش دوک ۲", "Show dock 2"), null, on2 ? 3 : 2, fg,
+                          v -> { sp.edit().putBoolean("dockOn2", !on2).apply(); show(); }));
+                  r.addView(slider(t("برنامه‌های هر صفحه دوک ۲", "Apps per dock 2 page"), "dockCount2", 4, 10, 4, "", fg, null));
+                  r.addView(slider(t("صفحه‌های دوک ۲", "Dock 2 pages"), "dockPages2", 1, 5, 1, "", fg, null));
+                  r.addView(slider(t("ارتفاع دوک ۲", "Dock 2 height"), "dockH2", 56, 140, 90, " dp", fg, null));
+                  r.addView(slider(t("عرض دوک ۲", "Dock 2 width"), "dockW2", 60, 100, 96, "%", fg, null));
+                  r.addView(slider(t("شفافیت دوک ۲", "Dock 2 opacity"), "dockA2", 0, 100, 25, "%", fg, null));
+                  r.addView(slider(t("اندازه آیکون‌های دوک ۲", "Dock 2 icon size"), "dockI2", 24, 64, 52, " dp", fg, null));
+
+                  int pos = sp.getInt("dockPos1", 0);
+                  r.addView(row(0xFF29B6F6, "⬇", t("مکان دوک‌ها: پایین", "Docks position: Bottom"), null, pos == 0 ? 1 : 0, fg,
+                          v -> { sp.edit().putInt("dockPos1", 0).apply(); show(); }));
+                  r.addView(row(0xFF66BB6A, "⬆", t("مکان دوک‌ها: بالا", "Docks position: Top"), null, pos == 1 ? 1 : 0, fg,
+                          v -> { sp.edit().putInt("dockPos1", 1).apply(); show(); }));
+
+                  ScrollView sv = new ScrollView(this);
+                  sv.setBackgroundColor(bg);
+                  sv.addView(r);
+                  return sv;
+              }
+
+              View iconPage(int fg) {
+                  LinearLayout r = vbox();
+                  r.addView(topBar(t("آیکون", "Icon"), fg));
+                  r.addView(slider(t("سایز آیکون برنامه‌ها", "App icon size"), "iconSz", 32, 96, 56, " dp", fg, null));
+                  r.addView(slider(t("سایز آیکون پوشه‌ها", "Folder icon size"), "folderSz", 32, 96, 56, " dp", fg, null));
+                  r.addView(slider(t("تعداد ردیف افقی (ستون)", "Horizontal count (columns)"), "gridCols", 4, 20, 4, "", fg, null));
+                  r.addView(slider(t("تعداد ردیف عمودی", "Vertical rows"), "gridRows", 4, 20, 7, "", fg, null));
+                  final boolean hide = sp.getBoolean("hideNames", false);
+                  r.addView(row(0xFFAB47BC, "🏷", t("حذف نام برنامه", "Hide app names"),
+                          t("نام آیکون‌ها و پوشه‌ها در صفحه اصلی حذف می‌شود", "Hides names under icons and folders"),
+                          hide ? 3 : 2, fg,
+                          v -> { sp.edit().putBoolean("hideNames", !hide).apply(); show(); }));
+
+                  final boolean sync = sp.getBoolean("folderSync", false);
+                  r.addView(row(0xFF66BB6A, "🔗", t("هم‌اندازه با آیکون‌ها", "Same size as icons"),
+                          t("سایز پوشه برابر سایز آیکون‌ها می‌شود", "Folder size follows icon size"),
+                          sync ? 3 : 2, fg,
+                          v -> { sp.edit().putBoolean("folderSync", !sync).apply(); show(); }));
+
+                  ScrollView sv = new ScrollView(this);
+                  sv.setBackgroundColor(bg);
+                  sv.addView(r);
+                  return sv;
+              }
+
+              View langPage(int fg) {
+                  LinearLayout r = vbox();
+                  r.addView(topBar(t("زبان", "Language"), fg));
+                  r.addView(row(0xFFEC407A, "ف", "فارسی", null, fa ? 1 : 0, fg, v -> setLang("fa")));
+                  r.addView(row(0xFF42A5F5, "En", "English", null, !fa ? 1 : 0, fg, v -> setLang("en")));
+                  return r;
+              }
+
+              void setLang(String l) {
+                  sp.edit().putString("lang", l).apply();
+                  fa = l.equals("fa");
+                  notifyBar();
+                  show();
+              }
+
+              // ================= picker =================
+              void openPicker(String target) {
+                  PackageManager pm = getPackageManager();
+                  Intent q = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+                  Set<String> seen = new HashSet<>();
+                  allApps = new ArrayList<>();
+                  for (ResolveInfo ri : pm.queryIntentActivities(q, 0)) {
+                      String p = ri.activityInfo.packageName;
+                      if (p.equals(getPackageName()) || !seen.add(p)) continue;
+                      AppItem a = new AppItem();
+                      a.pkg = p;
+                      a.label = ri.loadLabel(pm).toString();
+                      a.icon = ri.loadIcon(pm);
+                      allApps.add(a);
+                  }
+                  Collections.sort(allApps, (x, y) -> x.label.compareToIgnoreCase(y.label));
+                  selected.clear();
+                  query = "";
+                  pickTarget = target;
+                  added = new ArrayList<>();
+                  for (Item it : home) {
+                      if (it.folder) added.addAll(it.apps);
+                      else if (target == null) added.add(it.pkg);
+                  }
+                  page = PICKER;
+                  show();
+              }
+
+              List<AppItem> visible() {
+                  List<AppItem> l = new ArrayList<>();
+                  for (AppItem a : allApps)
+                      if (query.isEmpty() || a.label.toLowerCase().contains(query)) l.add(a);
+                  return l;
+              }
+
+              boolean allSel() {
+                  int n = 0;
+                  for (AppItem a : visible()) {
+                      if (added.contains(a.pkg)) continue;
+                      n++;
+                      if (!selected.contains(a.pkg)) return false;
+                  }
+                  return n > 0;
+              }
+
+              View pickerPage(final int fg) {
+                  LinearLayout r = vbox();
+                  r.addView(topBar(t("افزودن برنامه‌ها", "Add apps"), fg));
+
+                  final EditText et = new EditText(this);
+                  et.setHint(t("جستجو...", "Search..."));
+                  et.setHintTextColor(0x88888888);
+                  et.setTextColor(fg);
+                  et.setSingleLine(true);
+                  et.setPadding(dp(14), dp(10), dp(14), dp(10));
+                  GradientDrawable sg = new GradientDrawable();
+                  sg.setCornerRadius(dp(18));
+                  sg.setColor(light() ? 0x14000000 : 0x1AFFFFFF);
+                  et.setBackground(sg);
+                  et.addTextChangedListener(new TextWatcher() {
+                      public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                      public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                      public void afterTextChanged(Editable s) {
+                          query = s.toString().trim().toLowerCase();
+                          fillList();
+                          updateTop();
+                      }
+                  });
+                  LinearLayout.LayoutParams el = new LinearLayout.LayoutParams(-1, -2);
+                  el.setMargins(0, dp(12), 0, 0);
+                  r.addView(et, el);
+
+                  LinearLayout all = new LinearLayout(this);
+                  all.setGravity(Gravity.CENTER_VERTICAL);
+                  all.setPadding(dp(4), dp(12), dp(12), dp(12));
+                  allDot = new View(this);
+                  LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(dp(22), dp(22));
+                  dl.setMarginEnd(dp(10));
+                  all.addView(allDot, dl);
+                  allText = new TextView(this);
+                  allText.setTextSize(16);
+                  allText.setTextColor(fg);
+                  all.addView(allText);
+                  all.setOnClickListener(v -> {
+                      if (allSel()) {
+                          selected.clear();
+                      } else {
+                          for (AppItem a : visible())
+                              if (!added.contains(a.pkg)) selected.add(a.pkg);
+                      }
+                      fillList();
+                      updateTop();
+                  });
+                  r.addView(all, new LinearLayout.LayoutParams(-2, -2));
+
+                  ScrollView sv = new ScrollView(this);
+                  listBox = new LinearLayout(this);
+                  listBox.setOrientation(LinearLayout.VERTICAL);
+                  sv.addView(listBox);
+                  r.addView(sv, new LinearLayout.LayoutParams(-1, 0, 1));
+
+                  addBtn = new Button(this);
+                  addBtn.setAllCaps(false);
+                  addBtn.setTextColor(0xFFFFFFFF);
+                  GradientDrawable ag = new GradientDrawable();
+                  ag.setCornerRadius(dp(18));
+                  ag.setColor(0xFF3D7BF7);
+                  addBtn.setBackground(ag);
+                  addBtn.setOnClickListener(v -> {
+                      if (selected.isEmpty()) {
+                          Toast.makeText(this, t("برنامه‌ای انتخاب نشده", "No app selected"),
+                                  Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+                      if (pickTarget == null) {
+                          for (String p : selected) {
+                              Item a = new Item();
+                              a.pkg = p;
+                              home.add(a);
+                          }
+                      } else {
+                          Item f = findFolder(pickTarget);
+                          if (f != null) {
+                              for (String p : selected) if (!f.apps.contains(p)) f.apps.add(p);
+                              home.removeIf(q -> !q.folder && selected.contains(q.pkg));
+                          }
+                      }
+                      saveHome();
+                      pickTarget = null;
+                      page = HOME;
+                      show();
+                  });
+                  LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(-1, dp(52));
+                  bl.setMargins(0, dp(10), 0, 0);
+                  r.addView(addBtn, bl);
+
+                  fillList();
+                  updateTop();
+                  return r;
+              }
+
+              void fillList() {
+                  listBox.removeAllViews();
+                  for (final AppItem a : visible()) {
+                      final boolean isAdded = added.contains(a.pkg);
+                      LinearLayout row = new LinearLayout(this);
+                      row.setGravity(Gravity.CENTER_VERTICAL);
+                      row.setPadding(dp(8), dp(8), dp(8), dp(8));
+                      row.addView(styleAppIcon(a.icon, dp(40)));
+                      TextView tv = new TextView(this);
+                      tv.setText(a.label);
+                      tv.setTextSize(16);
+                      tv.setTextColor(fgc);
+                      tv.setMaxLines(1);
+                      tv.setEllipsize(TextUtils.TruncateAt.END);
+                      LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, -2, 1);
+                      tl.setMarginStart(dp(12));
+                      tl.setMarginEnd(dp(12));
+                      row.addView(tv, tl);
+                      final TextView tick = new TextView(this);
+                      tick.setText("✓");
+                      tick.setTextSize(14);
+                      tick.setGravity(Gravity.CENTER);
+                      tick.setLayoutParams(new LinearLayout.LayoutParams(dp(26), dp(26)));
+                      styleTick(tick, isAdded ? 2 : (selected.contains(a.pkg) ? 1 : 0));
+                      row.addView(tick);
+                      row.setOnClickListener(v -> {
+                          if (isAdded) return;
+                          if (selected.remove(a.pkg)) styleTick(tick, 0);
+                          else { selected.add(a.pkg); styleTick(tick, 1); }
+                          updateTop();
+                      });
+                      row.setOnLongClickListener(v -> {
+                          if (!isAdded && !selected.contains(a.pkg)) {
+                              selected.add(a.pkg);
+                              styleTick(tick, 1);
+                              updateTop();
+                          }
+                          return true;
+                      });
+                      listBox.addView(row);
+                  }
+              }
+
+              void styleTick(TextView tk, int s) {
+                  GradientDrawable g = new GradientDrawable();
+                  g.setShape(GradientDrawable.OVAL);
+                  if (s == 0) {
+                      g.setColor(0);
+                      g.setStroke(dp(2), 0xFF888888);
+                      tk.setTextColor(0);
+                  } else {
+                      g.setColor(s == 1 ? 0xFF34C759 : 0xFF8A8A8A);
+                      tk.setTextColor(0xFFFFFFFF);
+                  }
+                  tk.setBackground(g);
+              }
+
+              void updateTop() {
+                  boolean s = allSel();
+                  allText.setText(s ? t("لغو", "Cancel") : t("همه", "All"));
+                  GradientDrawable g = oval(s ? 0xFF34C759 : 0);
+                  if (!s) g.setStroke(dp(2), fgc);
+                  allDot.setBackground(g);
+                  addBtn.setText(t("افزودن", "Add") + " (" + selected.size() + ")");
+              }
+          }
+          EOF
+      - name: Build
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
